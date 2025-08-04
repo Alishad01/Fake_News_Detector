@@ -44,3 +44,34 @@ This project showcases the **power and responsibility** of Generative AI. It dem
 
 ## 🔧 Project Structure
 
+git clone https://github.com/YourUsername/Fake_News_Detector.git
+cd Fake_News_Detector
+pip install -r requirements.txt
+
+# For generation
+python generator/generate.py
+
+Accuracy: 0.87
+Generated headline: "Breaking: Government declares national holiday..."
+Sample prediction input/output screenshot
+
+## 📈 Results
+
+- **Dataset:** ~3,000 headlines (fake and real)
+- **Classifier:** BERT accuracy ≈ 87%, loss ≈ 0.39
+- **Generator:** GPT‑2 able to produce realistic headlines like:
+- "Breaking: Scientists warn of massive asteroid heading toward Earth"
+- "Reports say virus outbreak shuts down international flights"
+
+## 🧰 Quick Start
+
+```
+  bash
+  git clone <your repo URL>
+  cd Fake_News_Detector
+  pip install -r requirements.txt
+  python generator/generate.py
+  python detector/train_and_eval.py
+'''
+# For detection
+python detector/train_and_eval.py
