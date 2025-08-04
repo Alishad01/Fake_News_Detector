@@ -43,7 +43,7 @@ This project showcases the **power and responsibility** of Generative AI. It dem
 
 ## 🔧 Project Structure
 
-git clone https://github.com/Alishad01/Fake_News_Detector-.git
+git clone https://github.com/Alishad01/Fake_News_Detector
 cd Fake_News_Detector
 pip install -r requirements.txt
 
