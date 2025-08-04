@@ -1,0 +1,135 @@
+import pandas as pd
+import re
+import nltk
+from transformers import GPT2Tokenizer, GPT2LMHeadModel
+import torch
+from datasets import Dataset
+from sklearn.model_selection import train_test_split
+from transformers import BertTokenizerFast, BertForSequenceClassification, Trainer, TrainingArguments
+import argparse
+import os
+
+def download_nltk():
+    nltk.download('stopwords')
+    from nltk.corpus import stopwords
+    return set(stopwords.words('english'))
+
+def clean_text(text, stop_words):
+    text = text.lower()
+    text = re.sub(r'[^a-zA-Z\s]', '', text)
+    text = ' '.join(word for word in text.split() if word not in stop_words)
+    return text
+
+def load_and_prepare_data():
+    fake_url = 'https://raw.githubusercontent.com/clmentbisaillon/fake-and-real-news-dataset/master/fake.csv'
+    fakedata_set = pd.read_csv(fake_url)
+    fakedata_set['label'] = 1
+
+    real_url = 'https://raw.githubusercontent.com/clmentbisaillon/fake-and-real-news-dataset/master/true.csv'
+    realdata_set = pd.read_csv(real_url)
+    realdata_set['label'] = 0
+
+    dataset = pd.concat([fakedata_set, realdata_set], ignore_index=True)
+    dataset = dataset[['title', 'text', 'label']]
+    return dataset
+
+def preprocess_dataset(dataset, stop_words):
+    dataset['clean_title'] = dataset['title'].astype(str).apply(lambda x: clean_text(x, stop_words))
+    return dataset
+
+def generate_headline(prompt_text="Breaking: ", max_length=30):
+    gpt2_tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+    gpt2_model = GPT2LMHeadModel.from_pretrained('gpt2')
+    gpt2_model.eval()
+    inputs = gpt2_tokenizer.encode(prompt_text, return_tensors='pt')
+    outputs = gpt2_model.generate(
+        inputs,
+        max_length=max_length,
+        num_return_sequences=1,
+        do_sample=True,
+        top_k=50,
+        top_p=0.95,
+        temperature=0.9,
+        pad_token_id=gpt2_tokenizer.eos_token_id
+    )
+    generated_text = gpt2_tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return generated_text
+
+def train_and_evaluate(dataset, output_dir='./results', logs_dir='./logs', epochs=2, batch_size=8, sample_size=1000):
+    dataset_small = dataset[['clean_title', 'label']].dropna().sample(sample_size, random_state=42)
+    train_data, test_data = train_test_split(dataset_small, test_size=0.2)
+    train_data = train_data.rename(columns={'clean_title': 'text'})
+    test_data = test_data.rename(columns={'clean_title': 'text'})
+
+    train_data = Dataset.from_pandas(train_data)
+    test_data = Dataset.from_pandas(test_data)
+
+    tokenizer = BertTokenizerFast.from_pretrained('bert-base-uncased')
+
+    def tokenize_function(examples):
+        return tokenizer(examples['text'], padding='max_length', truncation=True)
+
+    train_data = train_data.map(tokenize_function, batched=True)
+    test_data = test_data.map(tokenize_function, batched=True)
+
+    model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=2)
+    training_args = TrainingArguments(
+        output_dir=output_dir,
+        evaluation_strategy='epoch',
+        per_device_train_batch_size=batch_size,
+        per_device_eval_batch_size=batch_size,
+        num_train_epochs=epochs,
+        logging_dir=logs_dir,
+        logging_steps=10,
+        save_strategy='epoch',
+    )
+
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_data,
+        eval_dataset=test_data,
+        tokenizer=tokenizer
+    )
+
+    trainer.train()
+    results = trainer.evaluate()
+    print(results)
+    # Save model for deployment
+    model.save_pretrained(output_dir)
+    tokenizer.save_pretrained(output_dir)
+    return results
+
+def main():
+    parser = argparse.ArgumentParser(description="Fake News Detection Pipeline")
+    parser.add_argument('--train', action='store_true', help='Train and evaluate the model')
+    parser.add_argument('--generate', action='store_true', help='Generate headlines using GPT-2')
+    parser.add_argument('--output_dir', type=str, default='./results', help='Directory to save model/results')
+    parser.add_argument('--logs_dir', type=str, default='./logs', help='Directory to save logs')
+    parser.add_argument('--epochs', type=int, default=2, help='Number of training epochs')
+    parser.add_argument('--batch_size', type=int, default=8, help='Batch size for training')
+    parser.add_argument('--sample_size', type=int, default=1000, help='Sample size for training')
+    parser.add_argument('--headline_prompt', type=str, default='Breaking :', help='Prompt for headline generation')
+    parser.add_argument('--headline_count', type=int, default=5, help='Number of headlines to generate')
+    args = parser.parse_args()
+
+    stop_words = download_nltk()
+    dataset = load_and_prepare_data()
+    dataset = preprocess_dataset(dataset, stop_words)
+
+    if args.generate:
+        for i in range(args.headline_count):
+            print(generate_headline(args.headline_prompt))
+    if args.train:
+        print(dataset[['title', 'clean_title', 'label']].sample(5))
+        train_and_evaluate(
+            dataset,
+            output_dir=args.output_dir,
+            logs_dir=args.logs_dir,
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            sample_size=args.sample_size
+        )
+
+if __name__ == "__main__":
+    main()
