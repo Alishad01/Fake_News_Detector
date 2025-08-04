@@ -12,7 +12,7 @@ To deploy:
     Upload this file and requirements.txt to GitHub or Gist.
     Deploy on Hugging Face Spaces, Streamlit Cloud, or similar.
 
-Author: Your Name
+Author: Ali Shad Naushad
 """
 
 import gradio as gr
@@ -71,4 +71,5 @@ if __name__ == "__main__":
     # Main entry point for local or cloud deployment
     app.launch(share=True, server_port=7860)
     # If port 7860 is busy, try:
+
     # app.launch(share=True, server_port=7861)
