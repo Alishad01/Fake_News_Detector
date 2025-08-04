@@ -30,8 +30,7 @@ This project showcases the **power and responsibility** of Generative AI. It dem
 - Pandas, NumPy, scikit-learn
 - NLTK (text cleaning)
 - Google Colab
-- (Optional) Gradio/Streamlit for UI
-
+- Gradio for UI
 ---
 
 ## 📂 Dataset Used
@@ -44,14 +43,14 @@ This project showcases the **power and responsibility** of Generative AI. It dem
 
 ## 🔧 Project Structure
 
-git clone https://github.com/YourUsername/Fake_News_Detector.git
+git clone https://github.com/Alishad01/Fake_News_Detector-.git
 cd Fake_News_Detector
 pip install -r requirements.txt
 
 # For generation
 python generator/generate.py
 
-Accuracy: 0.87
+**Accuracy: 0.87**
 Generated headline: "Breaking: Government declares national holiday..."
 Sample prediction input/output screenshot
 
